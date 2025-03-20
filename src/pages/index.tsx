@@ -10,7 +10,7 @@ import { speakCharacter } from "@/features/messages/speakCharacter";
 import { MessageInputContainer } from "@/components/messageInputContainer";
 import { SYSTEM_PROMPT } from "@/features/constants/systemPromptConstants";
 import { KoeiroParam, DEFAULT_PARAM } from "@/features/constants/koeiroParam";
-import { getChatResponseStream } from "@/features/chat/openAiChat";
+import { getChatResponseStream } from "@/features/chat/webLLMChat";
 import { Introduction } from "@/components/introduction";
 import { Menu } from "@/components/menu";
 import { GitHubLink } from "@/components/githubLink";
@@ -103,73 +103,85 @@ export default function Home() {
         ...messageLog,
       ];
 
-      const stream = await getChatResponseStream(messages, openAiKey).catch(
+      const chunks: any = await getChatResponseStream(messages, openAiKey).catch(
         (e) => {
           console.error(e);
           return null;
         }
       );
-      if (stream == null) {
+      if (chunks == null) {
         setChatProcessing(false);
         return;
       }
-
-      const reader = stream.getReader();
       let receivedMessage = "";
       let aiTextLog = "";
       let tag = "";
       const sentences = new Array<string>();
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          receivedMessage += value;
-
-          // 返答内容のタグ部分の検出
-          const tagMatch = receivedMessage.match(/^\[(.*?)\]/);
-          if (tagMatch && tagMatch[0]) {
-            tag = tagMatch[0];
-            receivedMessage = receivedMessage.slice(tag.length);
-          }
-
-          // 返答を一文単位で切り出して処理する
-          const sentenceMatch = receivedMessage.match(
-            /^(.+[。．！？\n]|.{10,}[、,])/
-          );
-          if (sentenceMatch && sentenceMatch[0]) {
-            const sentence = sentenceMatch[0];
-            sentences.push(sentence);
-            receivedMessage = receivedMessage
-              .slice(sentence.length)
-              .trimStart();
-
-            // 発話不要/不可能な文字列だった場合はスキップ
-            if (
-              !sentence.replace(
-                /^[\s\[\(\{「［（【『〈《〔｛«‹〘〚〛〙›»〕》〉』】）］」\}\)\]]+$/g,
-                ""
-              )
-            ) {
-              continue;
-            }
-
-            const aiText = `${tag} ${sentence}`;
-            const aiTalks = textsToScreenplay([aiText], koeiroParam);
-            aiTextLog += aiText;
-
-            // 文ごとに音声を生成 & 再生、返答を表示
-            const currentAssistantMessage = sentences.join(" ");
-            handleSpeakAi(aiTalks[0], () => {
-              setAssistantMessage(currentAssistantMessage);
-            });
-          }
+      for await (const chunk of chunks) {
+        receivedMessage += chunk.choices[0]?.delta.content || "";
+        console.log(receivedMessage);
+        if (chunk.usage) {
+          console.log(chunk.usage); // only last chunk has usage
         }
-      } catch (e) {
-        setChatProcessing(false);
-        console.error(e);
-      } finally {
-        reader.releaseLock();
+
+        // 返答内容のタグ部分の検出
+        const tagMatch = receivedMessage.match(/^\[(.*?)\]/);
+        if (tagMatch && tagMatch[0]) {
+          tag = tagMatch[0];
+          receivedMessage = receivedMessage.slice(tag.length);
+        }
+
+        // 返答を一文単位で切り出して処理する
+        const sentenceMatch = receivedMessage.match(
+          /^(.+[。．！？\n]|.{10,}[、,])/
+        );
+        if (sentenceMatch && sentenceMatch[0]) {
+          const sentence = sentenceMatch[0];
+          sentences.push(sentence);
+          receivedMessage = receivedMessage
+            .slice(sentence.length)
+            .trimStart();
+
+          // 発話不要/不可能な文字列だった場合はスキップ
+          if (
+            !sentence.replace(
+              /^[\s\[\(\{「［（【『〈《〔｛«‹〘〚〛〙›»〕》〉』】）］」\}\)\]]+$/g,
+              ""
+            )
+          ) {
+            continue;
+          }
+
+          const aiText = `${tag} ${sentence}`;
+          const aiTalks = textsToScreenplay([aiText], koeiroParam);
+          aiTextLog += aiText;
+
+          // 文ごとに音声を生成 & 再生、返答を表示
+          const currentAssistantMessage = sentences.join(" ");
+          handleSpeakAi(aiTalks[0], () => {
+            setAssistantMessage(currentAssistantMessage);
+          });
+          // ----------------------
+          // SpeechSynthesis APIのインスタンスを取得
+          const synth = window.speechSynthesis;
+          // 読み上げ用のオブジェクトを作成
+          const utterance = new SpeechSynthesisUtterance(sentence);
+
+          // ボイスの選択
+          //utterance.lang = 'en-US';
+          utterance.lang = 'ja-JP';
+
+          // 読み上げの実行
+          synth.speak(utterance);
+          textsToScreenplay(["[angry]"], koeiroParam);
+
+          // 読み上げ終わりを検出
+          utterance.onend = function (ev) {
+            console.log("speak end");
+          };
+          // ----------END---------
+        }
+
       }
 
       // アシスタントの返答をログに追加
