@@ -14,6 +14,7 @@ export class Model {
   public vrm?: VRM | null;
   public mixer?: THREE.AnimationMixer;
   public emoteController?: EmoteController;
+  public openlip: number = 0; // 口を開ける度合い
 
   private _lookAtTargetParent: THREE.Object3D;
   private _lipSync?: LipSync;
@@ -81,7 +82,9 @@ export class Model {
   public update(delta: number): void {
     if (this._lipSync) {
       const { volume } = this._lipSync.update();
-      this.emoteController?.lipSync("aa", volume);
+      //this.emoteController?.lipSync("aa", volume);
+      // 口を開ける度合いを制御する
+      this.emoteController?.lipSync("aa", this.openlip);
     }
 
     this.emoteController?.update(delta);

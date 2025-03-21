@@ -45,5 +45,9 @@ npm run dev
 
 [http://localhost:3000](http://localhost:3000) 
 
-
+outputに出力する場合
+```bash
+npm run build
+npm run export
+```
 ---
