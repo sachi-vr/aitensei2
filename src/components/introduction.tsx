@@ -16,6 +16,7 @@ export const Introduction = ({
 }: Props) => {
   const [opened, setOpened] = useState(true);
   const [loadingText, setLoadingText] = useState("Load");
+  const [selectedModel, setSelectedModel] = useState("Llama-3.2-1B-Instruct-q4f32_1-MLC");
 
   const handleAiKeyChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,6 +32,10 @@ export const Introduction = ({
     [onChangeKoeiromapKey]
   );
 
+  const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedModel(event.target.value);
+  };
+
   const handleClick = async () => {
     let dots = 0;
     const interval = setInterval(() => {
@@ -39,7 +44,7 @@ export const Introduction = ({
     }, 500); // Update every 500ms
 
     try {
-      const engine = await setupEngine();
+      const engine = await setupEngine(selectedModel);
       console.log("Engine initialized:", engine);
       setOpened(false);
     } catch (error) {
@@ -89,7 +94,17 @@ export const Introduction = ({
             />
           </div>
         </div>
-        
+        <div>
+      <label htmlFor="model-select">Select Model:</label>
+      <select id="model-select" value={selectedModel} onChange={handleModelChange}>
+        <option value="Llama-3.2-1B-Instruct-q4f32_1-MLC">
+          Llama-3.2-1B-Instruct-q4f32_1-MLC
+        </option>
+        <option value="DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC">
+          DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC
+        </option>
+      </select>
+    </div>
         <div className="my-24">
           <button
             onClick={handleClick}

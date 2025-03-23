@@ -130,6 +130,10 @@ export default function Home() {
           tag = tagMatch[0];
           receivedMessage = receivedMessage.slice(tag.length);
         }
+        // <think>から</think>までの部分を削除
+        receivedMessage = receivedMessage.replace(/<think>.*<\/think>/, '');
+        console.log("receivedMessage="+receivedMessage);
+        // TODO: </think>が閉じてないことがあった。最後の行だけ取り出したい
 
         const aiText = `${tag} ${receivedMessage}`;
         const aiTalks = textsToScreenplay([aiText], koeiroParam);

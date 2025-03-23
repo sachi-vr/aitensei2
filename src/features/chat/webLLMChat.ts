@@ -9,8 +9,12 @@ import { Message } from "../messages/messages";
 // Using CreateMLCEngine
 let engine: MLCEngine | null = null;
 
-export async function setupEngine() {
-  engine = await CreateMLCEngine("Llama-3.2-1B-Instruct-q4f32_1-MLC", { initProgressCallback });
+export async function setupEngine(selectedModel: string) {
+  // https://github.com/mlc-ai/web-llm/blob/main/src/config.ts
+  //engine = await CreateMLCEngine("Llama-3.2-1B-Instruct-q4f32_1-MLC", { initProgressCallback });
+  //engine = await CreateMLCEngine("DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC", { initProgressCallback });
+  console.log("Selected model:", selectedModel);
+  engine = await CreateMLCEngine(selectedModel, { initProgressCallback });
   return engine;
 }
 
@@ -20,7 +24,7 @@ export async function getChatResponseStream(
 ) {
   let chunks = null;
   if (engine == null) {
-    await setupEngine();
+    await setupEngine("Llama-3.2-1B-Instruct-q4f32_1-MLC");
   } else {
     // Chunks is an AsyncGenerator object
  chunks = await engine.chat.completions.create({
