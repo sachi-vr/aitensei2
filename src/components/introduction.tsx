@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { setupEngine } from "../features/chat/webLLMChat";
 import { Link } from "./link";
 
 type Props = {
@@ -14,6 +15,7 @@ export const Introduction = ({
   onChangeKoeiromapKey,
 }: Props) => {
   const [opened, setOpened] = useState(true);
+  const [loadingText, setLoadingText] = useState("Load");
 
   const handleAiKeyChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,6 +30,24 @@ export const Introduction = ({
     },
     [onChangeKoeiromapKey]
   );
+
+  const handleClick = async () => {
+    let dots = 0;
+    const interval = setInterval(() => {
+      dots = (dots + 1) % 4; // Cycle through 0, 1, 2, 3
+      setLoadingText(`loading${".".repeat(dots)}`);
+    }, 500); // Update every 500ms
+
+    try {
+      const engine = await setupEngine();
+      console.log("Engine initialized:", engine);
+      setOpened(false);
+    } catch (error) {
+      console.error("Failed to initialize engine:", error);
+    } finally {
+      clearInterval(interval);
+    }
+  };
 
   return opened ? (
     <div className="absolute z-40 w-full h-full px-24 py-40  bg-black/30 font-M_PLUS_2">
@@ -69,60 +89,13 @@ export const Introduction = ({
             />
           </div>
         </div>
-
-        <div className="my-24">
-          <div className="my-8 font-bold typography-20 text-secondary">
-            Koeiromap APIキー
-          </div>
-          <input
-            type="text"
-            placeholder="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-            value={koeiroMapKey}
-            onChange={handleKoeiromapKeyChange}
-            className="my-4 px-16 py-8 w-full h-40 bg-surface3 hover:bg-surface3-hover rounded-4 text-ellipsis"
-          ></input>
-          <div>
-            APIキーはrinna Developersから発行してください。
-            <Link
-              url="https://developers.rinna.co.jp/product/#product=koeiromap-free"
-              label="詳細はこちら"
-            />
-          </div>
-        </div>
-        <div className="my-24">
-          <div className="my-8 font-bold typography-20 text-secondary">
-            OpenAI APIキー
-          </div>
-          <input
-            type="text"
-            placeholder="sk-..."
-            value={openAiKey}
-            onChange={handleAiKeyChange}
-            className="my-4 px-16 py-8 w-full h-40 bg-surface3 hover:bg-surface3-hover rounded-4 text-ellipsis"
-          ></input>
-          <div>
-            APIキーは
-            <Link
-              url="https://platform.openai.com/account/api-keys"
-              label="OpenAIのサイト"
-            />
-            で取得できます。取得したAPIキーをフォームに入力してください。
-          </div>
-          <div className="my-16">
-            ChatGPT
-            APIはブラウザから直接アクセスしています。また、APIキーや会話内容はピクシブのサーバには保存されません。
-            <br />
-            ※利用しているモデルはChatGPT API (GPT-3.5)です。
-          </div>
-        </div>
+        
         <div className="my-24">
           <button
-            onClick={() => {
-              setOpened(false);
-            }}
+            onClick={handleClick}
             className="font-bold bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled text-white px-24 py-8 rounded-oval"
           >
-            APIキーを入力してはじめる
+            {loadingText}
           </button>
         </div>
       </div>

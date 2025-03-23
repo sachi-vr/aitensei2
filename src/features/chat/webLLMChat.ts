@@ -9,7 +9,7 @@ import { Message } from "../messages/messages";
 // Using CreateMLCEngine
 let engine: MLCEngine | null = null;
 
-async function setupEngine() {
+export async function setupEngine() {
   engine = await CreateMLCEngine("Llama-3.2-1B-Instruct-q4f32_1-MLC", { initProgressCallback });
   return engine;
 }
