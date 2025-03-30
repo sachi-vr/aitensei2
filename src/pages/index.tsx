@@ -138,7 +138,12 @@ export default function Home() {
         receivedMessage = receivedMessage.replace(/<think>.*<\/think>/, '');
         console.log("receivedMessage="+receivedMessage);
         // 最後の行だけ取り出す
-        const lines = receivedMessage.split("\n");
+        const tmpstr = receivedMessage.trim();
+        const lines = tmpstr.split("\n");
+        if (lines.length === 0) {
+          console.log("No lines found in the response.");
+          return;
+        }
         const lastLine = lines[lines.length - 1].trim();
         // 下側のメッセージに表示する
         setAssistantMessage(lastLine);
