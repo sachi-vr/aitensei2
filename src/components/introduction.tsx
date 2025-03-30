@@ -106,6 +106,8 @@ export const Introduction = ({
           DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC
         </option>
       </select>
+      <hr />
+      <label htmlFor="voiceLang-select">Select Voice:</label>
       <select id="voiceLang-select" onChange={(e) => onChangeVoiceLang(e.target.value)}>
         <option value="en-US">English</option>
         <option value="ja-JP">日本語</option>

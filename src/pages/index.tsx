@@ -125,6 +125,8 @@ export default function Home() {
         if (chunk.usage) {
           console.log(chunk.usage); // only last chunk has usage
         }
+        // 下側のメッセージに表示する
+        setAssistantMessage(receivedMessage);
       }
         // 返答内容のタグ部分の検出
         const tagMatch = receivedMessage.match(/^\[(.*?)\]/);
@@ -135,9 +137,13 @@ export default function Home() {
         // <think>から</think>までの部分を削除
         receivedMessage = receivedMessage.replace(/<think>.*<\/think>/, '');
         console.log("receivedMessage="+receivedMessage);
-        // TODO: </think>が閉じてないことがあった。最後の行だけ取り出したい
+        // 最後の行だけ取り出す
+        const lines = receivedMessage.split("\n");
+        const lastLine = lines[lines.length - 1].trim();
+        // 下側のメッセージに表示する
+        setAssistantMessage(lastLine);
 
-        const aiText = `${tag} ${receivedMessage}`;
+        const aiText = `${tag} ${lastLine}`;
         const aiTalks = textsToScreenplay([aiText], koeiroParam);
         aiTextLog += aiText;
 
@@ -145,13 +151,13 @@ export default function Home() {
           /* オリジナルのChatVRMはここで音声を生成していたが、
           koeiromapKeyが無いので機能しないはず */
           handleSpeakAi(aiTalks[0], () => {
-            setAssistantMessage(receivedMessage);
+            setAssistantMessage(lastLine);
           });
           // ----------------------
           // SpeechSynthesis APIのインスタンスを取得
           const synth = window.speechSynthesis;
           // 読み上げ用のオブジェクトを作成
-          const utterance = new SpeechSynthesisUtterance(receivedMessage);
+          const utterance = new SpeechSynthesisUtterance(lastLine);
 
           // ボイスの選択
           utterance.lang = voiceLang; // 言語を指定 en-US / ja-JP
@@ -182,6 +188,8 @@ export default function Home() {
             if (viewer.model) {
               viewer.model.openlip = 0; // 口を閉じる
             }
+            // 下側のメッセージ削除
+            setAssistantMessage("");
           };
           // ----------END---------
 
