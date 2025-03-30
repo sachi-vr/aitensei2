@@ -16,6 +16,9 @@ const createSpeakCharacter = () => {
     onStart?: () => void,
     onComplete?: () => void
   ) => {
+    if (koeiroApiKey == null || koeiroApiKey === "") {
+      return;
+    }
     const fetchPromise = prevFetchPromise.then(async () => {
       const now = Date.now();
       if (now - lastTime < 1000) {

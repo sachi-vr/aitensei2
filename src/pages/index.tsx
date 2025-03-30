@@ -26,6 +26,8 @@ export default function Home() {
   const [chatProcessing, setChatProcessing] = useState(false);
   const [chatLog, setChatLog] = useState<Message[]>([]);
   const [assistantMessage, setAssistantMessage] = useState("");
+  const [voiceLang, setVoiceLang] = useState("en-US");
+
 
   useEffect(() => {
     if (window.localStorage.getItem("chatVRMParams")) {
@@ -140,6 +142,8 @@ export default function Home() {
         aiTextLog += aiText;
 
           // 文ごとに音声を生成 & 再生、返答を表示
+          /* オリジナルのChatVRMはここで音声を生成していたが、
+          koeiromapKeyが無いので機能しないはず */
           handleSpeakAi(aiTalks[0], () => {
             setAssistantMessage(receivedMessage);
           });
@@ -150,8 +154,7 @@ export default function Home() {
           const utterance = new SpeechSynthesisUtterance(receivedMessage);
 
           // ボイスの選択
-          //utterance.lang = 'en-US';
-          utterance.lang = 'ja-JP';
+          utterance.lang = voiceLang; // 言語を指定 en-US / ja-JP
           // 読み上げ中の口パクを制御
           let lipSyncInterval: NodeJS.Timeout | null = null;
 
@@ -193,7 +196,7 @@ export default function Home() {
       setChatLog(messageLogAssistant);
       setChatProcessing(false);
     },
-    [systemPrompt, chatLog, handleSpeakAi, openAiKey, koeiroParam]
+    [systemPrompt, chatLog, handleSpeakAi, openAiKey, koeiroParam, voiceLang]
   );
 
   return (
@@ -204,6 +207,7 @@ export default function Home() {
         koeiroMapKey={koeiromapKey}
         onChangeAiKey={setOpenAiKey}
         onChangeKoeiromapKey={setKoeiromapKey}
+        onChangeVoiceLang={setVoiceLang} // 言語変更関数を渡す
       />
       <VrmViewer />
       <MessageInputContainer

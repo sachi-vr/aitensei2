@@ -7,12 +7,14 @@ type Props = {
   koeiroMapKey: string;
   onChangeAiKey: (openAiKey: string) => void;
   onChangeKoeiromapKey: (koeiromapKey: string) => void;
+  onChangeVoiceLang: (koeiromapKey: string) => void;
 };
 export const Introduction = ({
   openAiKey,
   koeiroMapKey,
   onChangeAiKey,
   onChangeKoeiromapKey,
+  onChangeVoiceLang,
 }: Props) => {
   const [opened, setOpened] = useState(true);
   const [loadingText, setLoadingText] = useState("Load");
@@ -103,6 +105,10 @@ export const Introduction = ({
         <option value="DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC">
           DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC
         </option>
+      </select>
+      <select id="voiceLang-select" onChange={(e) => onChangeVoiceLang(e.target.value)}>
+        <option value="en-US">English</option>
+        <option value="ja-JP">日本語</option>
       </select>
     </div>
         <div className="my-24">
