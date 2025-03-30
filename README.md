@@ -47,7 +47,6 @@ npm run dev
 
 outputに出力する場合
 ```bash
-npm run build
 npm run export
 ```
 ---
