@@ -26,7 +26,7 @@ export default function Home() {
   const [chatProcessing, setChatProcessing] = useState(false);
   const [chatLog, setChatLog] = useState<Message[]>([]);
   const [assistantMessage, setAssistantMessage] = useState("");
-  const [voiceLang, setVoiceLang] = useState("en-US");
+  const [voiceLang, setVoiceLang] = useState("ja-JP");
 
 
   useEffect(() => {

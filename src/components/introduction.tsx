@@ -109,8 +109,8 @@ export const Introduction = ({
       <hr />
       <label htmlFor="voiceLang-select">Select Voice:</label>
       <select id="voiceLang-select" onChange={(e) => onChangeVoiceLang(e.target.value)}>
+      <option value="ja-JP">日本語</option>
         <option value="en-US">English</option>
-        <option value="ja-JP">日本語</option>
       </select>
     </div>
         <div className="my-24">
