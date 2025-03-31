@@ -22,13 +22,13 @@ ChatVRMの各機能は主に以下の技術を使用しています。
 
 ## デモ
 
-TODO:
+[DEMOページ](https://aitensei2.vsachi.com/)
 
 ## 実行
 ローカル環境で実行する場合はこのリポジトリをクローンするか、ダウンロードしてください。
 
 ```bash
-git clone git@.........git
+git clone git@github.com:sachi-vr/aitensei2.git
 ```
 
 必要なパッケージをインストールしてください。
