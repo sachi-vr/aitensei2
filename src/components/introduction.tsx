@@ -80,9 +80,9 @@ export const Introduction = ({
             、 会話文生成には
             <Link
               url={
-                "https://openai.com/blog/introducing-chatgpt-and-whisper-apis"
+                "https://webllm.mlc.ai/"
               }
-              label={"ChatGPT API"}
+              label={"WebLLM"}
             />
             を使用しています。 
           </div>
