@@ -1,7 +1,14 @@
-import { KnownIconType } from "@charcoal-ui/icons";
+import { BiDotsHorizontalRounded } from "react-icons/bi";
+import { BiX } from "react-icons/bi";
+import { BiMenu } from "react-icons/bi";
+import { BiConversation } from "react-icons/bi";
+import { BiMicrophone } from "react-icons/bi";
+import { BiSend } from "react-icons/bi";
+/* ここまでreact-icons */
 import { ButtonHTMLAttributes } from "react";
+
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
-  iconName: keyof KnownIconType;
+  iconName: string;
   isProcessing: boolean;
   label?: string;
 };
@@ -20,9 +27,18 @@ export const IconButton = ({
       `}
     >
       {isProcessing ? (
-        <pixiv-icon name={"24/Dot"} scale="1"></pixiv-icon>
+        // 処理中がTrue
+       <BiDotsHorizontalRounded className="text-2xl" />
       ) : (
-        <pixiv-icon name={iconName} scale="1"></pixiv-icon>
+        (iconName ==="24/Menu" ? (/*24/Menu"がTrue*/<BiMenu className="text-2xl" />) : 
+          (iconName ==="24/CommentFill" ? (/*24/CommentFill会話ログ有*/<BiConversation className="text-2xl" />) :
+            (iconName === "24/Microphone" ? (/*24/MicrophoneがTrue*/<BiMicrophone className="text-2xl" />) :
+              (iconName === "24/Send" ? (/*24/SendがTrue*/<BiSend className="text-2xl" />) :
+                (/*FalseX*/<BiX className="text-2xl" />)
+              )
+            )
+          )
+        )
       )}
       {label && <div className="mx-4 font-bold">{label}</div>}
     </button>
