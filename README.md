@@ -4,11 +4,11 @@ pixiv/ChatVRMを元としたプロジェクトです。
 WebLLMに対応させました。
 
 ---
-ChatVRMはブラウザで簡単に3Dキャラクターと会話ができるデモアプリケーションです。
+AI転生2はブラウザで簡単に3Dキャラクターと会話ができるデモアプリケーションです。
 
 VRMファイルをインポートしてキャラクターに合わせた声の調整や、感情表現を含んだ返答文の生成などを行うことができます。
 
-ChatVRMの各機能は主に以下の技術を使用しています。
+AI転生2の各機能は主に以下の技術を使用しています。
 
 - ユーザーの音声の認識
     - [Web Speech API(SpeechRecognition)](https://developer.mozilla.org/ja/docs/Web/API/SpeechRecognition)
