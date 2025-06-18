@@ -18,7 +18,7 @@ export const Introduction = ({
 }: Props) => {
   const [opened, setOpened] = useState(true);
   const [loadingText, setLoadingText] = useState("Load");
-  const [selectedModel, setSelectedModel] = useState("gemma-2-2b-jpn-it-q4f32_1-MLC");
+  const [selectedModel, setSelectedModel] = useState("Qwen3-1.7B-q4f16_1-MLC");
 
   const handleAiKeyChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,7 +99,10 @@ export const Introduction = ({
         <div>
       <label htmlFor="model-select">Select Model:</label>
       <select id="model-select" value={selectedModel} onChange={handleModelChange}>
-      <option value="gemma-2-2b-jpn-it-q4f32_1-MLC">
+        <option value="Qwen3-1.7B-q4f16_1-MLC">
+          Qwen3-1.7B-q4f16_1-MLC
+        </option>
+        <option value="gemma-2-2b-jpn-it-q4f32_1-MLC">
           gemma-2-2b-jpn-it-q4f32_1-MLC
         </option>
         <option value="Llama-3.2-1B-Instruct-q4f32_1-MLC">
