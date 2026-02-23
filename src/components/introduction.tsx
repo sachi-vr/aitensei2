@@ -1,38 +1,20 @@
-import { useState, useCallback } from "react";
-import { setupEngine } from "../features/chat/webLLMChat";
+import { useState } from "react";
+import {
+  DEFAULT_TRANSFORMERS_MODEL,
+  setupEngine,
+  TRANSFORMERS_MODEL_OPTIONS,
+} from "../features/chat/transformersChat";
 import { Link } from "./link";
 
 type Props = {
-  openAiKey: string;
-  koeiroMapKey: string;
-  onChangeAiKey: (openAiKey: string) => void;
-  onChangeKoeiromapKey: (koeiromapKey: string) => void;
   onChangeVoiceLang: (koeiromapKey: string) => void;
 };
 export const Introduction = ({
-  openAiKey,
-  koeiroMapKey,
-  onChangeAiKey,
-  onChangeKoeiromapKey,
   onChangeVoiceLang,
 }: Props) => {
   const [opened, setOpened] = useState(true);
   const [loadingText, setLoadingText] = useState("Load");
-  const [selectedModel, setSelectedModel] = useState("Qwen3-1.7B-q4f16_1-MLC");
-
-  const handleAiKeyChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      onChangeAiKey(event.target.value);
-    },
-    [onChangeAiKey]
-  );
-
-  const handleKoeiromapKeyChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      onChangeKoeiromapKey(event.target.value);
-    },
-    [onChangeKoeiromapKey]
-  );
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_TRANSFORMERS_MODEL);
 
   const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedModel(event.target.value);
@@ -80,9 +62,9 @@ export const Introduction = ({
             、 会話文生成には
             <Link
               url={
-                "https://webllm.mlc.ai/"
+                "https://huggingface.co/docs/transformers.js/main/en/index"
               }
-              label={"WebLLM"}
+              label={"Transformers.js v4"}
             />
             を使用しています。 
           </div>
@@ -99,18 +81,11 @@ export const Introduction = ({
         <div>
       <label htmlFor="model-select">Select Model:</label>
       <select id="model-select" value={selectedModel} onChange={handleModelChange}>
-        <option value="Qwen3-1.7B-q4f16_1-MLC">
-          Qwen3-1.7B-q4f16_1-MLC
-        </option>
-        <option value="gemma-2-2b-jpn-it-q4f32_1-MLC">
-          gemma-2-2b-jpn-it-q4f32_1-MLC
-        </option>
-        <option value="Llama-3.2-1B-Instruct-q4f32_1-MLC">
-          Llama-3.2-1B-Instruct-q4f32_1-MLC
-        </option>
-        <option value="DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC">
-          DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC
-        </option>
+        {TRANSFORMERS_MODEL_OPTIONS.map((model) => (
+          <option key={model.id} value={model.id}>
+            {model.label}
+          </option>
+        ))}
       </select>
       <hr />
       <label htmlFor="voiceLang-select">Select Voice:</label>

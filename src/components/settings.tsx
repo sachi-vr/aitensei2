@@ -12,13 +12,11 @@ import {
 import { Link } from "./link";
 
 type Props = {
-  openAiKey: string;
   systemPrompt: string;
   chatLog: Message[];
   koeiroParam: KoeiroParam;
   koeiromapKey: string;
   onClickClose: () => void;
-  onChangeAiKey: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onChangeSystemPrompt: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onChangeChatLog: (index: number, text: string) => void;
   onChangeKoeiroParam: (x: number, y: number) => void;
@@ -28,14 +26,12 @@ type Props = {
   onChangeKoeiromapKey: (event: React.ChangeEvent<HTMLInputElement>) => void;
 };
 export const Settings = ({
-  openAiKey,
   chatLog,
   systemPrompt,
   koeiroParam,
   koeiromapKey,
   onClickClose,
   onChangeSystemPrompt,
-  onChangeAiKey,
   onChangeChatLog,
   onChangeKoeiroParam,
   onClickOpenVrmFile,
