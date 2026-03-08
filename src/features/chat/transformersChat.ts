@@ -127,7 +127,7 @@ export async function getChatResponseStream(messages: Message[]) {
 
   const prompt = buildPrompt(messages);
   const result = await engine!(prompt, {
-    max_new_tokens: 256,
+    max_new_tokens: 4096,
     temperature: 0.8,
     do_sample: true,
     return_full_text: false,
