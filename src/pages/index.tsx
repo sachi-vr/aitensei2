@@ -124,24 +124,18 @@ export default function Home() {
         // 下側のメッセージに表示する
         setAssistantMessage(receivedMessage);
       }
-      // <think>から</think>までの部分を削除
-      receivedMessage = receivedMessage.replace(/<think>.*<\/think>/, '');
-      // 最後の行だけ取り出す
-      const tmpstr = receivedMessage.trim();
-      const lines = tmpstr.split("\n");
-      if (lines.length === 0) {
-        console.log("No lines found in the response.");
-        return;
-      }
-      const lastLine = lines[lines.length - 1].trim();
-      if (!lastLine) {
+      // 改行を含む<think>...</think>ブロックも除去する
+      receivedMessage = receivedMessage.replace(/<think>[\s\S]*?<\/think>/g, "");
+      // aiMessageがAIからの回答で読み上げる部分
+      const aiMessage = receivedMessage.trim();
+      if (!aiMessage) {
         setChatProcessing(false);
         return;
       }
       // 下側のメッセージに表示する
-      setAssistantMessage(lastLine);
+      setAssistantMessage(aiMessage);
 
-      const aiText = tag ? `${tag} ${lastLine}` : lastLine;
+      const aiText = tag ? `${tag} ${aiMessage}` : aiMessage;
       const aiTalks = textsToScreenplay([aiText], koeiroParam);
       aiTextLog += aiText;
 
@@ -149,13 +143,13 @@ export default function Home() {
       /* オリジナルのChatVRMはここで音声を生成していたが、
       koeiromapKeyが無いので機能しないはず */
       handleSpeakAi(aiTalks[0], () => {
-        setAssistantMessage(lastLine);
+        setAssistantMessage(aiMessage);
       });
       // ----------------------
       // SpeechSynthesis APIのインスタンスを取得
       const synth = window.speechSynthesis;
       // 読み上げ用のオブジェクトを作成
-      const utterance = new SpeechSynthesisUtterance(lastLine);
+      const utterance = new SpeechSynthesisUtterance(aiMessage);
 
       // ボイスの選択
       utterance.lang = voiceLang; // 言語を指定 en-US / ja-JP
