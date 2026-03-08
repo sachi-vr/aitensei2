@@ -39,6 +39,14 @@ type EngineLoadProgressInfo =
       total: number;
     }
   | {
+      status: "progress_total";
+      name: string;
+      progress: number;
+      loaded: number;
+      total: number;
+      files: Record<string, { loaded: number; total: number }>;
+    }
+  | {
       status: "ready";
       task: string;
       model: string;
@@ -144,6 +152,14 @@ export async function setupEngineWithProgress(
       onProgress?.({
         percent: 100,
         status: "ready",
+      });
+      return;
+    }
+
+    if (info.status === "progress_total") {
+      onProgress?.({
+        percent: Math.round(info.progress),
+        status: info.status,
       });
       return;
     }

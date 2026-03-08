@@ -18,6 +18,7 @@ import { Meta } from "@/components/meta";
 
 export default function Home() {
   const { viewer } = useContext(ViewerContext);
+  const model = viewer.model;
 
   const [systemPrompt, setSystemPrompt] = useState(SYSTEM_PROMPT);
   const [koeiromapKey, setKoeiromapKey] = useState("");
@@ -164,8 +165,8 @@ export default function Home() {
         console.log("speak start");
         lipSyncInterval = setInterval(() => {
           // ランダムな値で口の開き具合をシミュレート
-          if (viewer.model) {
-            viewer.model.openlip = Math.random() * 0.5 + 0.5; // 0.5〜1.0の範囲で変化
+          if (model) {
+            model.openlip = Math.random() * 0.5 + 0.5; // 0.5〜1.0の範囲で変化
           }
         }, 100); // 100msごとに更新
       };
@@ -177,8 +178,8 @@ export default function Home() {
           clearInterval(lipSyncInterval); // タイマーを停止
           lipSyncInterval = null;
         }
-        if (viewer.model) {
-          viewer.model.openlip = 0; // 口を閉じる
+        if (model) {
+          model.openlip = 0; // 口を閉じる
         }
         // 下側のメッセージ削除
         setAssistantMessage("");
@@ -194,7 +195,7 @@ export default function Home() {
       setChatLog(messageLogAssistant);
       setChatProcessing(false);
     },
-    [systemPrompt, chatLog, handleSpeakAi, koeiroParam, voiceLang]
+    [systemPrompt, chatLog, handleSpeakAi, koeiroParam, voiceLang, model]
   );
 
   return (

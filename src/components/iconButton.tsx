@@ -1,11 +1,12 @@
-import { BiDotsHorizontalRounded } from "react-icons/bi";
-import { BiX } from "react-icons/bi";
-import { BiMenu } from "react-icons/bi";
-import { BiConversation } from "react-icons/bi";
-import { BiMicrophone } from "react-icons/bi";
-import { BiSend } from "react-icons/bi";
-/* ここまでreact-icons */
-import { ButtonHTMLAttributes } from "react";
+import {
+  BiConversation,
+  BiDotsHorizontalRounded,
+  BiMenu,
+  BiMicrophone,
+  BiSend,
+  BiX,
+} from "react-icons/bi";
+import { ButtonHTMLAttributes, ElementType } from "react";
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   iconName: string;
@@ -19,6 +20,20 @@ export const IconButton = ({
   label,
   ...rest
 }: Props) => {
+  const Icon = (
+    isProcessing
+      ? BiDotsHorizontalRounded
+      : iconName === "24/Menu"
+        ? BiMenu
+        : iconName === "24/CommentFill"
+          ? BiConversation
+          : iconName === "24/Microphone"
+            ? BiMicrophone
+            : iconName === "24/Send"
+              ? BiSend
+              : BiX
+  ) as ElementType<{ className?: string }>;
+
   return (
     <button
       {...rest}
@@ -26,20 +41,7 @@ export const IconButton = ({
         ${rest.className}
       `}
     >
-      {isProcessing ? (
-        // 処理中がTrue
-       <BiDotsHorizontalRounded className="text-2xl" />
-      ) : (
-        (iconName ==="24/Menu" ? (/*24/Menu"がTrue*/<BiMenu className="text-2xl" />) : 
-          (iconName ==="24/CommentFill" ? (/*24/CommentFill会話ログ有*/<BiConversation className="text-2xl" />) :
-            (iconName === "24/Microphone" ? (/*24/MicrophoneがTrue*/<BiMicrophone className="text-2xl" />) :
-              (iconName === "24/Send" ? (/*24/SendがTrue*/<BiSend className="text-2xl" />) :
-                (/*FalseX*/<BiX className="text-2xl" />)
-              )
-            )
-          )
-        )
-      )}
+      <Icon className="text-2xl" />
       {label && <div className="mx-4 font-bold">{label}</div>}
     </button>
   );
