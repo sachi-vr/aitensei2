@@ -24,6 +24,32 @@ type ChatChunk = {
   };
 };
 
+type EngineLoadProgressInfo =
+  | {
+      status: "initiate" | "download" | "done";
+      name: string;
+      file: string;
+    }
+  | {
+      status: "progress";
+      name: string;
+      file: string;
+      progress: number;
+      loaded: number;
+      total: number;
+    }
+  | {
+      status: "ready";
+      task: string;
+      model: string;
+    };
+
+type EngineLoadState = {
+  percent: number;
+  file?: string;
+  status: EngineLoadProgressInfo["status"];
+};
+
 export const TRANSFORMERS_MODEL_OPTIONS = [
   {
     id: "onnx-community/Qwen3-4B-ONNX",
@@ -87,17 +113,69 @@ export async function setupEngine(selectedModel: string) {
   if (!("gpu" in navigator)) {
     throw new Error("WebGPU is not available in this browser.");
   }
+  return setupEngineWithProgress(selectedModel);
+}
+
+export async function setupEngineWithProgress(
+  selectedModel: string,
+  onProgress?: (state: EngineLoadState) => void
+) {
+  if (typeof window === "undefined") {
+    throw new Error("Transformers.js can only run in the browser.");
+  }
+  if (!("gpu" in navigator)) {
+    throw new Error("WebGPU is not available in this browser.");
+  }
   if (engine && currentModel === selectedModel) {
+    onProgress?.({
+      percent: 100,
+      status: "ready",
+    });
     return engine;
   }
 
   const transformers = await import("@huggingface/transformers");
   const { env, pipeline } = transformers;
   env.allowLocalModels = false;
+  const fileProgress = new Map<string, number>();
+
+  const reportProgress = (info: EngineLoadProgressInfo) => {
+    if (info.status === "ready") {
+      onProgress?.({
+        percent: 100,
+        status: "ready",
+      });
+      return;
+    }
+
+    if (info.status === "done") {
+      fileProgress.set(info.file, 100);
+    } else if (info.status === "progress") {
+      fileProgress.set(info.file, info.progress);
+    } else if (!fileProgress.has(info.file)) {
+      fileProgress.set(info.file, 0);
+    }
+
+    const progressValues = Array.from(fileProgress.values());
+    const percent =
+      progressValues.length > 0
+        ? Math.round(
+            progressValues.reduce((sum, value) => sum + value, 0) /
+              progressValues.length
+          )
+        : 0;
+
+    onProgress?.({
+      percent,
+      file: info.file,
+      status: info.status,
+    });
+  };
 
   engine = (await pipeline("text-generation", selectedModel, {
     device: "webgpu",
     dtype: "q4f16",
+    progress_callback: reportProgress,
   })) as TextGenerationPipeline;
   currentModel = selectedModel;
   return engine;
