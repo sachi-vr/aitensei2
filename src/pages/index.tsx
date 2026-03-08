@@ -10,7 +10,7 @@ import { speakCharacter } from "@/features/messages/speakCharacter";
 import { MessageInputContainer } from "@/components/messageInputContainer";
 import { SYSTEM_PROMPT } from "@/features/constants/systemPromptConstants";
 import { KoeiroParam, DEFAULT_PARAM } from "@/features/constants/koeiroParam";
-import { getChatResponseStream } from "@/features/chat/webLLMChat";
+import { getChatResponseStream } from "@/features/chat/transformersChat";
 import { Introduction } from "@/components/introduction";
 import { Menu } from "@/components/menu";
 import { GitHubLink } from "@/components/githubLink";
@@ -20,7 +20,6 @@ export default function Home() {
   const { viewer } = useContext(ViewerContext);
 
   const [systemPrompt, setSystemPrompt] = useState(SYSTEM_PROMPT);
-  const [openAiKey, setOpenAiKey] = useState("testkey");
   const [koeiromapKey, setKoeiromapKey] = useState("");
   const [koeiroParam, setKoeiroParam] = useState<KoeiroParam>(DEFAULT_PARAM);
   const [chatProcessing, setChatProcessing] = useState(false);
@@ -79,11 +78,6 @@ export default function Home() {
    */
   const handleSendChat = useCallback(
     async (text: string) => {
-      if (!openAiKey) {
-        setAssistantMessage("APIキーが入力されていません");
-        return;
-      }
-
       const newMessage = text;
 
       if (newMessage == null) return;
@@ -105,9 +99,12 @@ export default function Home() {
         ...messageLog,
       ];
 
-      const chunks: any = await getChatResponseStream(messages, openAiKey).catch(
+      const chunks: any = await getChatResponseStream(messages).catch(
         (e) => {
           console.error(e);
+          setAssistantMessage(
+            "モデル読み込みに失敗しました。WebGPU対応ブラウザか確認してください。"
+          );
           return null;
         }
       );
@@ -118,7 +115,6 @@ export default function Home() {
       let receivedMessage = "";
       let aiTextLog = "";
       let tag = "";
-      const sentences = new Array<string>();
       for await (const chunk of chunks) {
         receivedMessage += chunk.choices[0]?.delta.content || "";
         console.log(receivedMessage);
@@ -128,77 +124,66 @@ export default function Home() {
         // 下側のメッセージに表示する
         setAssistantMessage(receivedMessage);
       }
-        // 返答内容のタグ部分の検出
-        const tagMatch = receivedMessage.match(/^\[(.*?)\]/);
-        if (tagMatch && tagMatch[0]) {
-          tag = tagMatch[0];
-          receivedMessage = receivedMessage.slice(tag.length);
+      // 改行を含む<think>...</think>ブロックも除去する
+      receivedMessage = receivedMessage.replace(/<think>[\s\S]*?<\/think>/g, "");
+      // aiMessageがAIからの回答で読み上げる部分
+      const aiMessage = receivedMessage.trim();
+      if (!aiMessage) {
+        setChatProcessing(false);
+        return;
+      }
+      // 下側のメッセージに表示する
+      setAssistantMessage(aiMessage);
+
+      const aiText = tag ? `${tag} ${aiMessage}` : aiMessage;
+      const aiTalks = textsToScreenplay([aiText], koeiroParam);
+      aiTextLog += aiText;
+
+      // 文ごとに音声を生成 & 再生、返答を表示
+      /* オリジナルのChatVRMはここで音声を生成していたが、
+      koeiromapKeyが無いので機能しないはず */
+      handleSpeakAi(aiTalks[0], () => {
+        setAssistantMessage(aiMessage);
+      });
+      // ----------------------
+      // SpeechSynthesis APIのインスタンスを取得
+      const synth = window.speechSynthesis;
+      // 読み上げ用のオブジェクトを作成
+      const utterance = new SpeechSynthesisUtterance(aiMessage);
+
+      // ボイスの選択
+      utterance.lang = voiceLang; // 言語を指定 en-US / ja-JP
+      // 読み上げ中の口パクを制御
+      let lipSyncInterval: NodeJS.Timeout | null = null;
+
+      // 読み上げの実行
+      synth.speak(utterance);
+      //viewer.model!.openlip = 1.0;
+      // 読み上げ開始時
+      utterance.onstart = function () {
+        console.log("speak start");
+        lipSyncInterval = setInterval(() => {
+          // ランダムな値で口の開き具合をシミュレート
+          if (viewer.model) {
+            viewer.model.openlip = Math.random() * 0.5 + 0.5; // 0.5〜1.0の範囲で変化
+          }
+        }, 100); // 100msごとに更新
+      };
+
+      // 読み上げ終わりを検出
+      utterance.onend = function () {
+        console.log("speak end");
+        if (lipSyncInterval) {
+          clearInterval(lipSyncInterval); // タイマーを停止
+          lipSyncInterval = null;
         }
-        // <think>から</think>までの部分を削除
-        receivedMessage = receivedMessage.replace(/<think>.*<\/think>/, '');
-        console.log("receivedMessage="+receivedMessage);
-        // 最後の行だけ取り出す
-        const tmpstr = receivedMessage.trim();
-        const lines = tmpstr.split("\n");
-        if (lines.length === 0) {
-          console.log("No lines found in the response.");
-          return;
+        if (viewer.model) {
+          viewer.model.openlip = 0; // 口を閉じる
         }
-        const lastLine = lines[lines.length - 1].trim();
-        // 下側のメッセージに表示する
-        setAssistantMessage(lastLine);
-
-        const aiText = `${tag} ${lastLine}`;
-        const aiTalks = textsToScreenplay([aiText], koeiroParam);
-        aiTextLog += aiText;
-
-          // 文ごとに音声を生成 & 再生、返答を表示
-          /* オリジナルのChatVRMはここで音声を生成していたが、
-          koeiromapKeyが無いので機能しないはず */
-          handleSpeakAi(aiTalks[0], () => {
-            setAssistantMessage(lastLine);
-          });
-          // ----------------------
-          // SpeechSynthesis APIのインスタンスを取得
-          const synth = window.speechSynthesis;
-          // 読み上げ用のオブジェクトを作成
-          const utterance = new SpeechSynthesisUtterance(lastLine);
-
-          // ボイスの選択
-          utterance.lang = voiceLang; // 言語を指定 en-US / ja-JP
-          // 読み上げ中の口パクを制御
-          let lipSyncInterval: NodeJS.Timeout | null = null;
-
-          // 読み上げの実行
-          synth.speak(utterance);
-          //viewer.model!.openlip = 1.0;
-          // 読み上げ開始時
-          utterance.onstart = function () {
-            console.log("speak start");
-            lipSyncInterval = setInterval(() => {
-              // ランダムな値で口の開き具合をシミュレート
-              if (viewer.model) {
-                viewer.model.openlip = Math.random() * 0.5 + 0.5; // 0.5〜1.0の範囲で変化
-              }
-            }, 100); // 100msごとに更新
-          };
-
-          // 読み上げ終わりを検出
-          utterance.onend = function (ev) {
-            console.log("speak end");
-            if (lipSyncInterval) {
-              clearInterval(lipSyncInterval); // タイマーを停止
-              lipSyncInterval = null;
-            }
-            if (viewer.model) {
-              viewer.model.openlip = 0; // 口を閉じる
-            }
-            // 下側のメッセージ削除
-            setAssistantMessage("");
-          };
-          // ----------END---------
-
-
+        // 下側のメッセージ削除
+        setAssistantMessage("");
+      };
+      // ----------END---------
 
       // アシスタントの返答をログに追加
       const messageLogAssistant: Message[] = [
@@ -209,17 +194,13 @@ export default function Home() {
       setChatLog(messageLogAssistant);
       setChatProcessing(false);
     },
-    [systemPrompt, chatLog, handleSpeakAi, openAiKey, koeiroParam, voiceLang]
+    [systemPrompt, chatLog, handleSpeakAi, koeiroParam, voiceLang]
   );
 
   return (
     <div className={"font-M_PLUS_2"}>
       <Meta />
       <Introduction
-        openAiKey={openAiKey}
-        koeiroMapKey={koeiromapKey}
-        onChangeAiKey={setOpenAiKey}
-        onChangeKoeiromapKey={setKoeiromapKey}
         onChangeVoiceLang={setVoiceLang} // 言語変更関数を渡す
       />
       <VrmViewer />
@@ -228,13 +209,11 @@ export default function Home() {
         onChatProcessStart={handleSendChat}
       />
       <Menu
-        openAiKey={openAiKey}
         systemPrompt={systemPrompt}
         chatLog={chatLog}
         koeiroParam={koeiroParam}
         assistantMessage={assistantMessage}
         koeiromapKey={koeiromapKey}
-        onChangeAiKey={setOpenAiKey}
         onChangeSystemPrompt={setSystemPrompt}
         onChangeChatLog={handleChangeChatLog}
         onChangeKoeiromapParam={setKoeiroParam}

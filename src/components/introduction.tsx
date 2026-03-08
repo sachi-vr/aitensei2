@@ -1,58 +1,50 @@
-import { useState, useCallback } from "react";
-import { setupEngine } from "../features/chat/webLLMChat";
+import { useState } from "react";
+import {
+  DEFAULT_TRANSFORMERS_MODEL,
+  setupEngineWithProgress,
+  TRANSFORMERS_MODEL_OPTIONS,
+} from "../features/chat/transformersChat";
 import { Link } from "./link";
 
 type Props = {
-  openAiKey: string;
-  koeiroMapKey: string;
-  onChangeAiKey: (openAiKey: string) => void;
-  onChangeKoeiromapKey: (koeiromapKey: string) => void;
   onChangeVoiceLang: (koeiromapKey: string) => void;
 };
 export const Introduction = ({
-  openAiKey,
-  koeiroMapKey,
-  onChangeAiKey,
-  onChangeKoeiromapKey,
   onChangeVoiceLang,
 }: Props) => {
   const [opened, setOpened] = useState(true);
-  const [loadingText, setLoadingText] = useState("Load");
-  const [selectedModel, setSelectedModel] = useState("Qwen3-1.7B-q4f16_1-MLC");
-
-  const handleAiKeyChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      onChangeAiKey(event.target.value);
-    },
-    [onChangeAiKey]
+  const [selectedModel, setSelectedModel] = useState<string>(
+    DEFAULT_TRANSFORMERS_MODEL
   );
-
-  const handleKoeiromapKeyChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      onChangeKoeiromapKey(event.target.value);
-    },
-    [onChangeKoeiromapKey]
-  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [progressFile, setProgressFile] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedModel(event.target.value);
   };
 
   const handleClick = async () => {
-    let dots = 0;
-    const interval = setInterval(() => {
-      dots = (dots + 1) % 4; // Cycle through 0, 1, 2, 3
-      setLoadingText(`loading${".".repeat(dots)}`);
-    }, 500); // Update every 500ms
+    setIsLoading(true);
+    setProgressPercent(0);
+    setProgressFile("");
+    setErrorMessage("");
 
     try {
-      const engine = await setupEngine(selectedModel);
+      const engine = await setupEngineWithProgress(selectedModel, (state) => {
+        setProgressPercent(state.percent);
+        setProgressFile(state.file ?? "");
+      });
       console.log("Engine initialized:", engine);
       setOpened(false);
     } catch (error) {
       console.error("Failed to initialize engine:", error);
+      setErrorMessage(
+        error instanceof Error ? error.message : "モデルの初期化に失敗しました。"
+      );
     } finally {
-      clearInterval(interval);
+      setIsLoading(false);
     }
   };
 
@@ -80,9 +72,9 @@ export const Introduction = ({
             、 会話文生成には
             <Link
               url={
-                "https://webllm.mlc.ai/"
+                "https://huggingface.co/docs/transformers.js/main/en/index"
               }
-              label={"WebLLM"}
+              label={"Transformers.js v4"}
             />
             を使用しています。 
           </div>
@@ -97,35 +89,54 @@ export const Introduction = ({
           </div>
         </div>
         <div>
-      <label htmlFor="model-select">Select Model:</label>
-      <select id="model-select" value={selectedModel} onChange={handleModelChange}>
-        <option value="Qwen3-1.7B-q4f16_1-MLC">
-          Qwen3-1.7B-q4f16_1-MLC
-        </option>
-        <option value="gemma-2-2b-jpn-it-q4f32_1-MLC">
-          gemma-2-2b-jpn-it-q4f32_1-MLC
-        </option>
-        <option value="Llama-3.2-1B-Instruct-q4f32_1-MLC">
-          Llama-3.2-1B-Instruct-q4f32_1-MLC
-        </option>
-        <option value="DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC">
-          DeepSeek-R1-Distill-Llama-8B-q4f16_1-MLC
-        </option>
-      </select>
-      <hr />
-      <label htmlFor="voiceLang-select">Select Voice:</label>
-      <select id="voiceLang-select" onChange={(e) => onChangeVoiceLang(e.target.value)}>
-      <option value="ja-JP">日本語(Japanese)</option>
-        <option value="en-US">English</option>
-      </select>
-    </div>
+          <label htmlFor="model-select">Select Model:</label>
+          <select
+            id="model-select"
+            value={selectedModel}
+            onChange={handleModelChange}
+            disabled={isLoading}
+          >
+            {TRANSFORMERS_MODEL_OPTIONS.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.label}
+              </option>
+            ))}
+          </select>
+          <hr />
+          <label htmlFor="voiceLang-select">Select Voice:</label>
+          <select
+            id="voiceLang-select"
+            onChange={(e) => onChangeVoiceLang(e.target.value)}
+            disabled={isLoading}
+          >
+            <option value="ja-JP">日本語(Japanese)</option>
+            <option value="en-US">English</option>
+          </select>
+        </div>
         <div className="my-24">
           <button
             onClick={handleClick}
+            disabled={isLoading}
             className="font-bold bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled text-white px-24 py-8 rounded-oval"
           >
-            {loadingText}
+            {isLoading ? `loading ${progressPercent}%` : "Load"}
           </button>
+          {isLoading ? (
+            <div className="mt-12 max-w-md">
+              <div className="h-8 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full bg-secondary transition-all duration-200"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <div className="mt-8 text-sm text-slate-700">
+                {progressFile || "モデルを読み込み中..."}
+              </div>
+            </div>
+          ) : null}
+          {errorMessage ? (
+            <div className="mt-8 text-sm text-red-600">{errorMessage}</div>
+          ) : null}
         </div>
       </div>
     </div>

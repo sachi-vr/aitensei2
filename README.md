@@ -1,19 +1,19 @@
 # AI転生2
 
 pixiv/ChatVRMを元としたプロジェクトです。
-WebLLMに対応させました。
+Transformers.js v4に対応させました。WebGPUを利用できます。
 
 ---
 AI転生2はブラウザで簡単に3Dキャラクターと会話ができるデモアプリケーションです。
 
-VRMファイルをインポートしてキャラクターに合わせた声の調整や、感情表現を含んだ返答文の生成などを行うことができます。
+VRMファイルをインポートしてキャラクターを変更できます。
 
 AI転生2の各機能は主に以下の技術を使用しています。
 
 - ユーザーの音声の認識
     - [Web Speech API(SpeechRecognition)](https://developer.mozilla.org/ja/docs/Web/API/SpeechRecognition)
 - 返答文の生成
-    - [WebLLM](https://webllm.mlc.ai/)
+    - [Transformers.js](https://huggingface.co/docs/transformers.js/main/en/index)
 - 読み上げ音声の生成
     - [SpeechSynthesis](https://developer.mozilla.org/ja/docs/Web/API/SpeechSynthesis)
 - 3Dキャラクターの表示
@@ -35,6 +35,7 @@ git clone git@github.com:sachi-vr/aitensei2.git
 ```bash
 npm install
 ```
+初回チャット時はモデルをダウンロードするため、起動まで時間がかかる場合があります。
 
 パッケージのインストールが完了した後、以下のコマンドで開発用のWebサーバーを起動します。
 ```bash
