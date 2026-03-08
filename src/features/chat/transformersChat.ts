@@ -1,10 +1,11 @@
 import { Message } from "../messages/messages";
-import { wait } from "@/utils/wait";
 
-type TextGenerationPipeline = (
+type TextGenerationPipeline = ((
   input: string,
   options?: Record<string, unknown>
-) => Promise<unknown>;
+) => Promise<unknown>) & {
+  tokenizer: unknown;
+};
 
 type ChatChunk = {
   choices: Array<{ delta: { content: string } }>;
@@ -46,57 +47,6 @@ const buildPrompt = (messages: Message[]): string => {
   return `${chat}\n\n<|assistant|>\n`;
 };
 
-const chunkText = (text: string, size = 8): string[] => {
-  const chunks: string[] = [];
-  for (let i = 0; i < text.length; i += size) {
-    chunks.push(text.slice(i, i + size));
-  }
-  return chunks;
-};
-
-const extractGeneratedText = (result: unknown, prompt: string): string => {
-  let generatedText = "";
-
-  if (typeof result === "string") {
-    generatedText = result;
-  } else if (Array.isArray(result) && result.length > 0) {
-    const first = result[0] as Record<string, unknown>;
-    const text = first.generated_text;
-    if (typeof text === "string") {
-      generatedText = text;
-    }
-  } else if (typeof result === "object" && result !== null) {
-    const obj = result as Record<string, unknown>;
-    const text = obj.generated_text;
-    if (typeof text === "string") {
-      generatedText = text;
-    }
-  }
-
-  if (generatedText.startsWith(prompt)) {
-    return generatedText.slice(prompt.length);
-  }
-  return generatedText;
-};
-
-async function* toChunkStream(text: string): AsyncGenerator<ChatChunk> {
-  const textChunks = chunkText(text, 8);
-  for (const piece of textChunks) {
-    yield {
-      choices: [{ delta: { content: piece } }],
-    };
-    await wait(0);
-  }
-  yield {
-    choices: [{ delta: { content: "" } }],
-    usage: {
-      prompt_tokens: 0,
-      completion_tokens: 0,
-      total_tokens: 0,
-    },
-  };
-}
-
 export async function setupEngine(selectedModel: string) {
   if (typeof window === "undefined") {
     throw new Error("Transformers.js can only run in the browser.");
@@ -120,18 +70,83 @@ export async function setupEngine(selectedModel: string) {
   return engine;
 }
 
+async function* streamGeneratedText(prompt: string): AsyncGenerator<ChatChunk> {
+  const transformers = await import("@huggingface/transformers");
+  const { TextStreamer } = transformers;
+
+  const queue: ChatChunk[] = [];
+  let pendingResolve: (() => void) | null = null;
+  let isDone = false;
+  let streamError: unknown = null;
+
+  const pushChunk = (chunk: ChatChunk) => {
+    queue.push(chunk);
+    pendingResolve?.();
+    pendingResolve = null;
+  };
+
+  const finish = () => {
+    isDone = true;
+    pendingResolve?.();
+    pendingResolve = null;
+  };
+
+  const streamer = new TextStreamer(engine!.tokenizer as never, {
+    skip_prompt: true,
+    skip_special_tokens: true,
+    callback_function: (text: string) => {
+      if (!text) {
+        return;
+      }
+      pushChunk({
+        choices: [{ delta: { content: text } }],
+      });
+    },
+  });
+
+  void engine!(prompt, {
+    max_new_tokens: 4096,
+    temperature: 0.8,
+    do_sample: true,
+    return_full_text: false,
+    streamer,
+  })
+    .then(() => {
+      pushChunk({
+        choices: [{ delta: { content: "" } }],
+        usage: {
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0,
+        },
+      });
+      finish();
+    })
+    .catch((error) => {
+      streamError = error;
+      finish();
+    });
+
+  while (!isDone || queue.length > 0) {
+    if (queue.length === 0) {
+      await new Promise<void>((resolve) => {
+        pendingResolve = resolve;
+      });
+      continue;
+    }
+    yield queue.shift()!;
+  }
+
+  if (streamError) {
+    throw streamError;
+  }
+}
+
 export async function getChatResponseStream(messages: Message[]) {
   if (engine == null) {
     await setupEngine(DEFAULT_TRANSFORMERS_MODEL);
   }
 
   const prompt = buildPrompt(messages);
-  const result = await engine!(prompt, {
-    max_new_tokens: 4096,
-    temperature: 0.8,
-    do_sample: true,
-    return_full_text: false,
-  });
-  const generatedText = extractGeneratedText(result, prompt);
-  return toChunkStream(generatedText);
+  return streamGeneratedText(prompt);
 }
