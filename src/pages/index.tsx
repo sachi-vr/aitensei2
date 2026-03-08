@@ -115,7 +115,6 @@ export default function Home() {
       let receivedMessage = "";
       let aiTextLog = "";
       let tag = "";
-      const sentences = new Array<string>();
       for await (const chunk of chunks) {
         receivedMessage += chunk.choices[0]?.delta.content || "";
         console.log(receivedMessage);
@@ -125,77 +124,72 @@ export default function Home() {
         // 下側のメッセージに表示する
         setAssistantMessage(receivedMessage);
       }
-        // 返答内容のタグ部分の検出
-        const tagMatch = receivedMessage.match(/^\[(.*?)\]/);
-        if (tagMatch && tagMatch[0]) {
-          tag = tagMatch[0];
-          receivedMessage = receivedMessage.slice(tag.length);
-        }
-        // <think>から</think>までの部分を削除
-        receivedMessage = receivedMessage.replace(/<think>.*<\/think>/, '');
-        console.log("receivedMessage="+receivedMessage);
-        // 最後の行だけ取り出す
-        const tmpstr = receivedMessage.trim();
-        const lines = tmpstr.split("\n");
-        if (lines.length === 0) {
-          console.log("No lines found in the response.");
-          return;
-        }
-        const lastLine = lines[lines.length - 1].trim();
-        // 下側のメッセージに表示する
+      // <think>から</think>までの部分を削除
+      receivedMessage = receivedMessage.replace(/<think>.*<\/think>/, '');
+      // 最後の行だけ取り出す
+      const tmpstr = receivedMessage.trim();
+      const lines = tmpstr.split("\n");
+      if (lines.length === 0) {
+        console.log("No lines found in the response.");
+        return;
+      }
+      const lastLine = lines[lines.length - 1].trim();
+      if (!lastLine) {
+        setChatProcessing(false);
+        return;
+      }
+      // 下側のメッセージに表示する
+      setAssistantMessage(lastLine);
+
+      const aiText = tag ? `${tag} ${lastLine}` : lastLine;
+      const aiTalks = textsToScreenplay([aiText], koeiroParam);
+      aiTextLog += aiText;
+
+      // 文ごとに音声を生成 & 再生、返答を表示
+      /* オリジナルのChatVRMはここで音声を生成していたが、
+      koeiromapKeyが無いので機能しないはず */
+      handleSpeakAi(aiTalks[0], () => {
         setAssistantMessage(lastLine);
+      });
+      // ----------------------
+      // SpeechSynthesis APIのインスタンスを取得
+      const synth = window.speechSynthesis;
+      // 読み上げ用のオブジェクトを作成
+      const utterance = new SpeechSynthesisUtterance(lastLine);
 
-        const aiText = `${tag} ${lastLine}`;
-        const aiTalks = textsToScreenplay([aiText], koeiroParam);
-        aiTextLog += aiText;
+      // ボイスの選択
+      utterance.lang = voiceLang; // 言語を指定 en-US / ja-JP
+      // 読み上げ中の口パクを制御
+      let lipSyncInterval: NodeJS.Timeout | null = null;
 
-          // 文ごとに音声を生成 & 再生、返答を表示
-          /* オリジナルのChatVRMはここで音声を生成していたが、
-          koeiromapKeyが無いので機能しないはず */
-          handleSpeakAi(aiTalks[0], () => {
-            setAssistantMessage(lastLine);
-          });
-          // ----------------------
-          // SpeechSynthesis APIのインスタンスを取得
-          const synth = window.speechSynthesis;
-          // 読み上げ用のオブジェクトを作成
-          const utterance = new SpeechSynthesisUtterance(lastLine);
+      // 読み上げの実行
+      synth.speak(utterance);
+      //viewer.model!.openlip = 1.0;
+      // 読み上げ開始時
+      utterance.onstart = function () {
+        console.log("speak start");
+        lipSyncInterval = setInterval(() => {
+          // ランダムな値で口の開き具合をシミュレート
+          if (viewer.model) {
+            viewer.model.openlip = Math.random() * 0.5 + 0.5; // 0.5〜1.0の範囲で変化
+          }
+        }, 100); // 100msごとに更新
+      };
 
-          // ボイスの選択
-          utterance.lang = voiceLang; // 言語を指定 en-US / ja-JP
-          // 読み上げ中の口パクを制御
-          let lipSyncInterval: NodeJS.Timeout | null = null;
-
-          // 読み上げの実行
-          synth.speak(utterance);
-          //viewer.model!.openlip = 1.0;
-          // 読み上げ開始時
-          utterance.onstart = function () {
-            console.log("speak start");
-            lipSyncInterval = setInterval(() => {
-              // ランダムな値で口の開き具合をシミュレート
-              if (viewer.model) {
-                viewer.model.openlip = Math.random() * 0.5 + 0.5; // 0.5〜1.0の範囲で変化
-              }
-            }, 100); // 100msごとに更新
-          };
-
-          // 読み上げ終わりを検出
-          utterance.onend = function (ev) {
-            console.log("speak end");
-            if (lipSyncInterval) {
-              clearInterval(lipSyncInterval); // タイマーを停止
-              lipSyncInterval = null;
-            }
-            if (viewer.model) {
-              viewer.model.openlip = 0; // 口を閉じる
-            }
-            // 下側のメッセージ削除
-            setAssistantMessage("");
-          };
-          // ----------END---------
-
-
+      // 読み上げ終わりを検出
+      utterance.onend = function () {
+        console.log("speak end");
+        if (lipSyncInterval) {
+          clearInterval(lipSyncInterval); // タイマーを停止
+          lipSyncInterval = null;
+        }
+        if (viewer.model) {
+          viewer.model.openlip = 0; // 口を閉じる
+        }
+        // 下側のメッセージ削除
+        setAssistantMessage("");
+      };
+      // ----------END---------
 
       // アシスタントの返答をログに追加
       const messageLogAssistant: Message[] = [

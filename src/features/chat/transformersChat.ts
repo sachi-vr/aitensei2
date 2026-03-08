@@ -4,7 +4,15 @@ type TextGenerationPipeline = ((
   input: string,
   options?: Record<string, unknown>
 ) => Promise<unknown>) & {
-  tokenizer: unknown;
+  tokenizer: {
+    apply_chat_template?: (
+      conversation: Message[],
+      options?: {
+        add_generation_prompt?: boolean;
+        tokenize?: boolean;
+      }
+    ) => string;
+  };
 };
 
 type ChatChunk = {
@@ -40,11 +48,36 @@ export const DEFAULT_TRANSFORMERS_MODEL = TRANSFORMERS_MODEL_OPTIONS[0].id;
 let engine: TextGenerationPipeline | null = null;
 let currentModel: string | null = null;
 
+const ROLE_MARKERS = ["<|assistant|>", "<|user|>", "<|system|>"] as const;
+
 const buildPrompt = (messages: Message[]): string => {
+  const prompt = engine?.tokenizer.apply_chat_template?.(messages, {
+    tokenize: false,
+    add_generation_prompt: true,
+  });
+  if (typeof prompt === "string") {
+    return prompt;
+  }
+
   const chat = messages
     .map((message) => `<|${message.role}|>\n${message.content}`)
     .join("\n\n");
   return `${chat}\n\n<|assistant|>\n`;
+};
+
+const sanitizeGeneratedText = (text: string): string => {
+  /* const withoutThinking = text.replace(/<think>[\s\S]*?<\/think>/g, ""); */
+  const stopIndex = ROLE_MARKERS.reduce((earliest, marker) => {
+    const index = text.indexOf(marker);
+    if (index === -1) {
+      return earliest;
+    }
+    return earliest === -1 ? index : Math.min(earliest, index);
+  }, -1);
+
+  return stopIndex === -1
+    ? text
+    : text.slice(0, stopIndex);
 };
 
 export async function setupEngine(selectedModel: string) {
@@ -78,6 +111,8 @@ async function* streamGeneratedText(prompt: string): AsyncGenerator<ChatChunk> {
   let pendingResolve: (() => void) | null = null;
   let isDone = false;
   let streamError: unknown = null;
+  let rawText = "";
+  let streamedLength = 0;
 
   const pushChunk = (chunk: ChatChunk) => {
     queue.push(chunk);
@@ -98,8 +133,15 @@ async function* streamGeneratedText(prompt: string): AsyncGenerator<ChatChunk> {
       if (!text) {
         return;
       }
+      rawText += text;
+      const sanitizedText = sanitizeGeneratedText(rawText);
+      const content = sanitizedText.slice(streamedLength);
+      streamedLength = sanitizedText.length;
+      if (!content) {
+        return;
+      }
       pushChunk({
-        choices: [{ delta: { content: text } }],
+        choices: [{ delta: { content } }],
       });
     },
   });
