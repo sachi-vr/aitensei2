@@ -55,7 +55,10 @@ export const MessageInputContainer = ({
   }, [isMicRecording, speechRecognition]);
 
   const handleClickSendButton = useCallback(() => {
-    onChatProcessStart(userMessage);
+    const trimmedMessage = userMessage.trim();
+    if (!trimmedMessage) return;
+
+    onChatProcessStart(trimmedMessage);
   }, [onChatProcessStart, userMessage]);
 
   useEffect(() => {
