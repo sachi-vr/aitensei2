@@ -3,7 +3,13 @@ import { useState, useEffect, useCallback } from "react";
 
 type Props = {
   isChatProcessing: boolean;
-  onChatProcessStart: (text: string) => void;
+  onChatProcessStart: (
+    text: string,
+    image?: {
+      dataUrl: string;
+      name: string;
+    }
+  ) => void;
 };
 
 /**
@@ -20,6 +26,10 @@ export const MessageInputContainer = ({
   const [speechRecognition, setSpeechRecognition] =
     useState<SpeechRecognition>();
   const [isMicRecording, setIsMicRecording] = useState(false);
+  const [imagePreview, setImagePreview] = useState<{
+    dataUrl: string;
+    name: string;
+  }>();
 
   // 音声認識の結果を処理する
   const handleRecognitionResult = useCallback(
@@ -56,10 +66,29 @@ export const MessageInputContainer = ({
 
   const handleClickSendButton = useCallback(() => {
     const trimmedMessage = userMessage.trim();
-    if (!trimmedMessage) return;
+    if (!trimmedMessage && !imagePreview) return;
 
-    onChatProcessStart(trimmedMessage);
-  }, [onChatProcessStart, userMessage]);
+    onChatProcessStart(trimmedMessage, imagePreview);
+  }, [imagePreview, onChatProcessStart, userMessage]);
+
+  const handleChangeImage = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        if (typeof reader.result !== "string") return;
+        setImagePreview({
+          dataUrl: reader.result,
+          name: file.name,
+        });
+      });
+      reader.readAsDataURL(file);
+    },
+    []
+  );
 
   useEffect(() => {
     const SpeechRecognition =
@@ -83,17 +112,21 @@ export const MessageInputContainer = ({
   useEffect(() => {
     if (!isChatProcessing) {
       setUserMessage("");
+      setImagePreview(undefined);
     }
   }, [isChatProcessing]);
 
   return (
     <MessageInput
       userMessage={userMessage}
+      imagePreview={imagePreview}
       isChatProcessing={isChatProcessing}
       isMicRecording={isMicRecording}
       onChangeUserMessage={(e) => setUserMessage(e.target.value)}
       onClickMicButton={handleClickMicButton}
       onClickSendButton={handleClickSendButton}
+      onChangeImage={handleChangeImage}
+      onClickRemoveImage={() => setImagePreview(undefined)}
     />
   );
 };

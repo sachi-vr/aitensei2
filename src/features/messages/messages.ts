@@ -5,6 +5,10 @@ import { KoeiroParam } from "../constants/koeiroParam";
 export type Message = {
   role: "assistant" | "system" | "user";
   content: string;
+  image?: {
+    dataUrl: string;
+    name?: string;
+  };
 };
 
 const talkStyles = [

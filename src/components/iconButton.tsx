@@ -1,6 +1,7 @@
 import {
   BiConversation,
   BiDotsHorizontalRounded,
+  BiImageAdd,
   BiMenu,
   BiMicrophone,
   BiSend,
@@ -31,7 +32,9 @@ export const IconButton = ({
             ? BiMicrophone
             : iconName === "24/Send"
               ? BiSend
-              : BiX
+              : iconName === "24/ImageAdd"
+                ? BiImageAdd
+                : BiX
   ) as ElementType<{ className?: string }>;
 
   return (
