@@ -61,16 +61,16 @@ type QwenModel = {
 
 export const TRANSFORMERS_MODEL_OPTIONS = [
   {
-    id: "onnx-community/Qwen3.5-0.8B-ONNX",
-    label: "Qwen3.5-0.8B-ONNX",
+    id: "onnx-community/Qwen3.5-0.8B-ONNX-OPT",
+    label: "Qwen3.5-0.8B-ONNX-OPT",
   },
   {
-    id: "onnx-community/Qwen3.5-2B-ONNX",
-    label: "Qwen3.5-2B-ONNX",
+    id: "onnx-community/Qwen3.5-2B-ONNX-OPT",
+    label: "Qwen3.5-2B-ONNX-OPT",
   },
   {
-    id: "onnx-community/Qwen3.5-4B-ONNX",
-    label: "Qwen3.5-4B-ONNX",
+    id: "onnx-community/Qwen3.5-4B-ONNX-OPT",
+    label: "Qwen3.5-4B-ONNX-OPT",
   },
 ] as const;
 
@@ -89,7 +89,14 @@ const ROLE_MARKERS = [
 
 const buildPrompt = (messages: Message[]): string => {
   const turns = messages
-    .map((message) => `<|im_start|>${message.role}\n${message.content}<|im_end|>`)
+    .map((message) => {
+      const imageToken =
+        message.image && message.role === "user"
+          ? "<|vision_start|><|image_pad|><|vision_end|>"
+          : "";
+
+      return `<|im_start|>${message.role}\n${imageToken}${message.content}<|im_end|>`;
+    })
     .join("\n");
 
   return `${turns}\n<|im_start|>assistant\n<think>\n\n</think>\n\n`;
@@ -215,7 +222,29 @@ export async function setupEngineWithProgress(
   return model;
 }
 
-async function* streamGeneratedText(prompt: string): AsyncGenerator<ChatChunk> {
+async function buildImages(messages: Message[]) {
+  const imageMessages = messages.filter(
+    (message) => message.role === "user" && message.image?.dataUrl
+  );
+  if (imageMessages.length === 0) {
+    return undefined;
+  }
+
+  const { RawImage } = await import("@huggingface/transformers");
+  const images = await Promise.all(
+    imageMessages.map(async (message) => {
+      const rawImage = await RawImage.read(message.image!.dataUrl);
+      return rawImage.resize(448, 448);
+    })
+  );
+
+  return images.length === 1 ? images[0] : images;
+}
+
+async function* streamGeneratedText(
+  prompt: string,
+  images?: unknown
+): AsyncGenerator<ChatChunk> {
   const transformers = await import("@huggingface/transformers");
   const { TextStreamer, InterruptableStoppingCriteria } = transformers;
 
@@ -259,7 +288,7 @@ async function* streamGeneratedText(prompt: string): AsyncGenerator<ChatChunk> {
     },
   });
 
-  void processor!(prompt)
+  void processor!(...(images ? [prompt, images] : [prompt]))
     .then((inputs) =>
       model!.generate({
         ...inputs,
@@ -308,5 +337,6 @@ export async function getChatResponseStream(messages: Message[]) {
   }
 
   const prompt = buildPrompt(messages);
-  return streamGeneratedText(prompt);
+  const images = await buildImages(messages);
+  return streamGeneratedText(prompt, images);
 }

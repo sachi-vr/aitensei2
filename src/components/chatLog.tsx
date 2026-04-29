@@ -25,7 +25,11 @@ export const ChatLog = ({ messages }: Props) => {
         {messages.map((msg, i) => {
           return (
             <div key={i} ref={messages.length - 1 === i ? chatScrollRef : null}>
-              <Chat role={msg.role} message={msg.content} />
+              <Chat
+                role={msg.role}
+                message={msg.content}
+                image={msg.image}
+              />
             </div>
           );
         })}
@@ -34,7 +38,15 @@ export const ChatLog = ({ messages }: Props) => {
   );
 };
 
-const Chat = ({ role, message }: { role: string; message: string }) => {
+const Chat = ({
+  role,
+  message,
+  image,
+}: {
+  role: string;
+  message: string;
+  image?: Message["image"];
+}) => {
   const roleColor =
     role === "assistant" ? "bg-secondary text-white " : "bg-base text-primary";
   const roleText = role === "assistant" ? "text-secondary" : "text-primary";
@@ -48,6 +60,13 @@ const Chat = ({ role, message }: { role: string; message: string }) => {
         {role === "assistant" ? "CHARACTER" : "YOU"}
       </div>
       <div className="px-24 py-16 bg-white rounded-b-8">
+        {image ? (
+          <img
+            src={image.dataUrl}
+            alt={image.name ?? "attached image"}
+            className="mb-12 max-h-160 w-full rounded-8 object-cover"
+          />
+        ) : null}
         <div className={`typography-16 font-bold ${roleText}`}>{message}</div>
       </div>
     </div>

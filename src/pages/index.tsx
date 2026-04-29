@@ -78,16 +78,22 @@ export default function Home() {
    * アシスタントとの会話を行う
    */
   const handleSendChat = useCallback(
-    async (text: string) => {
-      const newMessage = text;
+    async (
+      text: string,
+      image?: {
+        dataUrl: string;
+        name: string;
+      }
+    ) => {
+      const newMessage = text || (image ? "この画像について説明して。" : "");
 
-      if (newMessage == null) return;
+      if (!newMessage && !image) return;
 
       setChatProcessing(true);
       // ユーザーの発言を追加して表示
       const messageLog: Message[] = [
         ...chatLog,
-        { role: "user", content: newMessage },
+        { role: "user", content: newMessage, image },
       ];
       setChatLog(messageLog);
 
